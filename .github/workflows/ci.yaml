@@ -1,34 +1,32 @@
 name: AWS ECS Deploy
 on:
-  # release:
-  #   types: [created]
-  # pull_request:
-  #   branches: [ main ]
   workflow_dispatch:
 
-  jobs:
-    deploy:
-      name: Deploy
-      runs-on: ubuntu-latest
-      env:  
-        AWS_REGION: "us-east-1"
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_ECR_REPOSITORY_NAME: pastebin-backend
-        ECS_CLUSTER: pastebin-cluster
-        ECS_TASK_DEFINITION: pastebin-task
-        ECS_CONTAINER_NAME: pastebin-container
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v4
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: "us-east-1"
+      AWS_ECR_REPOSITORY_NAME: pastebin-backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-        - name: Login to Amazon ECR
-          uses: aws-actions/amazon-ecr-login@v1
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-        - name: Build, tag, and push image to Amazon ECR
-          id: build-image
-          uses: docker/build-push-action@v5
-          with:
-            context: .
-            push: true
-            tags: ${{ env.AWS_ECR_REPOSITORY_NAME }}:${{ github.sha }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.AWS_ECR_REPOSITORY_NAME }}:${{ github.sha }}
