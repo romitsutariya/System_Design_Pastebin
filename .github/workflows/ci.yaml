@@ -31,9 +31,13 @@ jobs:
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         
+      - name: List backend dir
+        run: ls -la ./pastebin-backend  
+        
       - name: Build, tag, and push image to Amazon ECR
         uses: docker/build-push-action@v6
         with:
           context: ./pastebin-backend
+          file: ./pastebin-backend/Dockerfile
           push: true
           tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.AWS_ECR_REPOSITORY_NAME }}:${{ github.sha }}
