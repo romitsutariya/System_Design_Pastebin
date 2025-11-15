@@ -1,6 +1,11 @@
 name: UI ECR Build and Push
 on:
   workflow_dispatch:
+    inputs:
+      vite_api_base_url:
+        description: "VITE_API_BASE_URL to embed at build time (e.g., https://api.example.com)"
+        required: true
+        default: "http://localhost:8000"
 
 jobs:
   build-and-push:
@@ -39,4 +44,6 @@ jobs:
           context: ./pastebin-ui
           file: ./pastebin-ui/Dockerfile
           push: true
+          build-args: |
+            VITE_API_BASE_URL=${{ github.event.inputs.vite_api_base_url }}
           tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.AWS_ECR_REPOSITORY_NAME }}:${{ github.sha }}

@@ -59,7 +59,7 @@ export default function ViewPaste() {
     }
     run();
     return () => { ignore = true; };
-  }, [id, state?.paste]);
+  }, [id]);
 
   if (loading) {
     return (

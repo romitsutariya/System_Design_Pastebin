@@ -4,6 +4,10 @@ FROM node:20-alpine AS builder
 # Set working directory
 WORKDIR /app
 
+# Accept Vite envs passed at build time (from CI) and expose them for the build step
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
 # Copy package files and install dependencies
 COPY package*.json ./
 RUN npm ci
@@ -11,7 +15,7 @@ RUN npm ci
 # Copy the rest of the source code
 COPY . .
 
-# Build the app (Vite will read .env at build time)
+# Build the app (Vite will read envs defined above at build time)
 RUN npm run build
 
 # Stage 2: serve with NGINX

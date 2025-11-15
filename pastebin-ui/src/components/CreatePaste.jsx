@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -32,6 +32,7 @@ const visibilities = [
 
 export default function CreatePaste() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [language, setLanguage] = useState('Python');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -41,6 +42,12 @@ export default function CreatePaste() {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Require auth for creating a paste
+    const token = (() => { try { return sessionStorage.getItem('jwt'); } catch { return null; } })();
+    if (!token) {
+      navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
     const payload = {
       language,
       title,
