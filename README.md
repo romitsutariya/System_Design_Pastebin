@@ -73,3 +73,7 @@ npm run preview
 - Tags support comma-separated input or arrays from backend.
 - `expiresAt` handling on the view page accepts epoch seconds, numeric strings, ISO strings, or `"never"`.
 - If the backend is down, submitting will still navigate to the `/view` page using in-memory state so you can demo the UI.
+
+sudo apt update
+sudo apt install python3-pip -y
+sudo apt install python3.12-venv
