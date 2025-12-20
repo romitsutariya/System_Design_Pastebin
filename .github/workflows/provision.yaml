@@ -3,43 +3,43 @@ on:
   workflow_dispatch:
     inputs:
       aws_region:
-        description: AWS region
+        description: "AWS region"
         required: true
         default: us-east-1
       ecr_repo_name:
-        description: ECR repository name
+        description: "ECR repository name"
         required: true
         default: pastebin-backend
       ecs_cluster_name:
-        description: ECS cluster name
+        description: "ECS cluster name"
         required: true
         default: pastebin-cluster
       task_family:
-        description: ECS task definition family
+        description: "ECS task definition family"
         required: true
         default: pastebin-task
       container_name:
-        description: Container name in task definition
+        description: "Container name in task definition"
         required: true
         default: pastebin-container
       container_port:
-        description: Container port to expose
+        description: "Container port to expose"
         required: true
         default: '8000'
       cpu:
-        description: Task CPU (Fargate valid values: 256, 512, 1024, 2048, 4096)
+        description: "Task CPU (Fargate valid values: 256, 512, 1024, 2048, 4096)"
         required: true
         default: '256'
       memory:
-        description: Task Memory in MiB (Fargate: 512, 1024, 2048, 3072, 4096, 5120, 6144, 7168, 8192, 16384, 30720)
+        description: "Task Memory in MiB (Fargate: 512, 1024, 2048, 3072, 4096, 5120, 6144, 7168, 8192, 16384, 30720)"
         required: true
         default: '512'
       execution_role_name:
-        description: IAM role name for ECS task execution (will be created if missing)
+        description: "IAM role name for ECS task execution (will be created if missing)"
         required: true
         default: ecsTaskExecutionRole
       image_tag:
-        description: Image tag to reference in task def (e.g., latest or a commit SHA)
+        description: "Image tag to reference in task def (e.g., latest or a commit SHA)"
         required: true
         default: latest
 
