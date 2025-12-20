@@ -139,6 +139,7 @@ def register(register: Login):
             users_table.put_item(Item={"username": register.username, "password": register.password})
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-        return issue_jwt_toke(register.username)
+        token = issue_jwt_toke(register.username)    
+        return {"token":token}
     raise HTTPException(status_code=400, detail="Invalid request")
 

@@ -104,6 +104,20 @@ jobs:
             aws iam attach-role-policy --role-name "$ROLE_NAME" --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
           fi
 
+      - name: Ensure IAM task role exists and has DynamoDB access
+        env:
+          ROLE_NAME: ecsPythonDynamoDBTaskRole
+        run: |
+          set -e
+          if ! aws iam get-role --role-name "$ROLE_NAME" >/dev/null 2>&1; then
+            TRUST='{ "Version": "2012-10-17", "Statement": [{ "Effect": "Allow", "Principal": { "Service": "ecs-tasks.amazonaws.com" }, "Action": "sts:AssumeRole" }] }'
+            aws iam create-role --role-name "$ROLE_NAME" --assume-role-policy-document "$TRUST" >/dev/null
+          fi
+          # Attach DynamoDB Full Access if not attached
+          if ! aws iam list-attached-role-policies --role-name "$ROLE_NAME" --query 'AttachedPolicies[?PolicyArn==`arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess`]' --output text | grep -q 'AmazonDynamoDBFullAccess'; then
+            aws iam attach-role-policy --role-name "$ROLE_NAME" --policy-arn arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+          fi
+
       - name: Register/Update ECS Task Definition
         env:
           REGISTRY: ${{ steps.aws.outputs.registry }}
@@ -112,6 +126,7 @@ jobs:
         run: |
           set -e
           EXEC_ROLE_ARN=arn:aws:iam::$ACCOUNT_ID:role/$EXECUTION_ROLE_NAME
+          TASK_ROLE_ARN=arn:aws:iam::$ACCOUNT_ID:role/ecsPythonDynamoDBTaskRole
           IMAGE_URI="$REGISTRY/$ECR_REPO:$IMAGE_TAG"
           cat > taskdef.json <<EOF
           {
@@ -121,6 +136,7 @@ jobs:
             "cpu": "${TASK_CPU}",
             "memory": "${TASK_MEMORY}",
             "executionRoleArn": "${EXEC_ROLE_ARN}",
+            "taskRoleArn": "${TASK_ROLE_ARN}",
             "containerDefinitions": [
               {
                 "name": "${CONTAINER_NAME}",

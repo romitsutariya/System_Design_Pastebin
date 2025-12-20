@@ -91,10 +91,6 @@ resource "aws_security_group" "allow_tls" {
   }
 }
 
-resource "aws_key_pair" "key-tf" {
-  key_name   = "key-tf"
-  public_key = file("${path.module}/id_rsa.pub")
-}
 
 #create dynamdb table
 resource "aws_dynamodb_table" "users" {
