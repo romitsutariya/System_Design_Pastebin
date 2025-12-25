@@ -1,42 +1,23 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import boto3
 import uuid
 import time
+import json
 
 from starlette.background import P
 from jwt_utils import issue_jwt_toke, verify_jwt_token
-from Login import Login
-# DynamoDB setup
-dynamodb = boto3.resource("dynamodb", region_name="us-east-1")  # change region
-table_name = "Pastes"
-users_table_name = "Users"
+from Paste import Paste
+from auth import router as auth_router
 
-# Ensure table exists (create if missing)
-# def create_table():
-#     existing_tables = boto3.client("dynamodb", region_name="us-east-1").list_tables()["TableNames"]
-#     if table_name not in existing_tables:
-#         dynamodb.create_table(
-#             TableName=table_name,
-#             KeySchema=[{"AttributeName": "id", "KeyType": "HASH"}],
-#             AttributeDefinitions=[{"AttributeName": "id", "AttributeType": "S"}],
-#             ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
-#         )
-#         print("Table created, waiting until active...")
-#         boto3.client("dynamodb", region_name="us-east-1").get_waiter("table_exists").wait(TableName=table_name)
-# create_table()
+
+# DynamoDB setup
+dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
+table_name = "Pastes"
 table = dynamodb.Table(table_name)
-users_table = dynamodb.Table(users_table_name)
-# Pydantic model
-class Paste(BaseModel):
-    title: str
-    content: str
-    expiresAt: str
-    visibility: str
-    
-    tags: list[str] = []    
+  
+sqs_client = boto3.client("sqs", region_name="us-east-1")
 
 app = FastAPI()
 app.add_middleware(
@@ -46,6 +27,9 @@ app.add_middleware(
     allow_methods=["*"],              # or ["GET", "POST"] if you want specific methods
     allow_headers=["*"],              # or specify certain headers
 )
+
+# Mount auth routes
+app.include_router(auth_router)
 
 ## write functions to conver the expire time from ui into minites user pass 1h, 1d, 1w, 1m, 1y Epoch time value: 1759418109)
 def convert_expiration_to_epoch(expiration: str) -> int:
@@ -68,8 +52,7 @@ def data(request: Request):
     return PlainTextResponse("Hello World!!!") 
 
 @app.post("/pastes")
-def create_paste(paste: Paste, request: Request):
-    # Require JWT in Authorization header for creating pastes
+def create_paste(paste: Paste, request: Request, background_tasks: BackgroundTasks):
     auth_header = request.headers.get("authorization")
     if not auth_header or not auth_header.lower().startswith("bearer "):
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -94,6 +77,7 @@ def create_paste(paste: Paste, request: Request):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
+    send_message_to_queue(item)
     return {"id": paste_id, "message": "Paste created successfully"}
 
 @app.get("/pastes/{paste_id}")
@@ -108,38 +92,23 @@ def get_paste(paste_id: str):
     
     return response["Item"]
 
-@app.post("/login")
-def login(login: Login):
-    if login.username is not None and login.password is not None:
-        try:
-            response = users_table.get_item(Key={"username": login.username})
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-        
-        if "Item" not in response:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        
-        if response["Item"]["password"] == login.password:
-            token = issue_jwt_toke(login.username)
-            return {"token": token}
-    raise HTTPException(status_code=403, detail="Forbidden")
 
-@app.post("/register")
-def register(register: Login):
-    if register.username is not None and register.password is not None:
-        try:
-            response = users_table.get_item(Key={"username": register.username})
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-        
-        if "Item" in response:
-            raise HTTPException(status_code=409, detail="User already exists")
-        
-        try:
-            users_table.put_item(Item={"username": register.username, "password": register.password})
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-        token = issue_jwt_toke(register.username)    
-        return {"token":token}
-    raise HTTPException(status_code=400, detail="Invalid request")
+def send_message_to_queue(paste):
+    try:
+        print("sending message to queue")
+        message = {
+            "id": paste.get("id"),
+            "content": paste.get("content")
+        }
+        response = sqs_client.send_message(
+            QueueUrl="https://sqs.us-east-1.amazonaws.com/186468893492/pastebin-backend-queue",
+            MessageBody=json.dumps(message)
+        )
+        print(f"Message sent! Message ID: {response['MessageId']}")
+        return response
+    except Exception as e:
+        print(f"Error sending message: {e}")
+        return None
+    
+
 

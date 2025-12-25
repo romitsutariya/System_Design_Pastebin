@@ -247,3 +247,8 @@ terraform.rc
 .terraformrc
 
 .env
+
+id_rsa
+id_rsa.pub
+lambda.zip
+.terraform.lock.hcl
