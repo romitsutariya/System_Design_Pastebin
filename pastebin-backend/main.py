@@ -12,6 +12,7 @@ from starlette.background import P
 from jwt_utils import issue_jwt_toke, verify_jwt_token
 from Paste import Paste
 from auth import router as auth_router
+from voice import router as voice_router
 
 load_dotenv()
 # DynamoDB setup
@@ -35,6 +36,7 @@ app.add_middleware(
 
 # Mount auth routes
 app.include_router(auth_router)
+app.include_router(voice_router)
 
 ## write functions to conver the expire time from ui into minites user pass 1h, 1d, 1w, 1m, 1y Epoch time value: 1759418109)
 def convert_expiration_to_epoch(expiration: str) -> int:
