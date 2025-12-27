@@ -1,23 +1,28 @@
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 import boto3
 import uuid
 import time
 import json
+import os
 
 from starlette.background import P
 from jwt_utils import issue_jwt_toke, verify_jwt_token
 from Paste import Paste
 from auth import router as auth_router
 
-
+load_dotenv()
 # DynamoDB setup
 dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
 table_name = "Pastes"
 table = dynamodb.Table(table_name)
   
 sqs_client = boto3.client("sqs", region_name="us-east-1")
+QUEUE_URL = os.getenv("SQS_QUEUE_URL")
+
+print(QUEUE_URL)
 
 app = FastAPI()
 app.add_middleware(
@@ -100,8 +105,10 @@ def send_message_to_queue(paste):
             "id": paste.get("id"),
             "content": paste.get("content")
         }
+        if not QUEUE_URL:
+            raise RuntimeError("SQS_QUEUE_URL env var is not set")
         response = sqs_client.send_message(
-            QueueUrl="https://sqs.us-east-1.amazonaws.com/186468893492/pastebin-backend-queue",
+            QueueUrl=QUEUE_URL,
             MessageBody=json.dumps(message)
         )
         print(f"Message sent! Message ID: {response['MessageId']}")
